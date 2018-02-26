@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "strict": true,
+
+    "module": "esnext",
+    "target": "es5",
+    "jsx": "react",
+
+    "sourceMap": true,
+    "importHelpers": true,
+    "downlevelIteration": true,
+
+    "moduleResolution": "node",
+    "baseUrl": ".",
+
+    "allowSyntheticDefaultImports": true,
+
+    "lib": ["dom", "dom.iterable", "es2017"]
+  },
+  "include": ["./src/**/*"]
+}
