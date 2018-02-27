@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { WidgetProps } from 'src/widgets/types';
+import { Omit } from 'src/util.types';
 
 export interface WidgetControllerProps extends WidgetProps {
     widget: React.ComponentClass<WidgetProps> | React.SFC<WidgetProps>;
@@ -16,30 +17,63 @@ export class DefaultController extends React.PureComponent<WidgetControllerProps
     }
 }
 
-interface AsyncWidgetProps extends WidgetProps {
+interface AsyncWidgetInjectedProps {
+    renderCount: number;
+}
+interface AsyncWidgetProps extends Omit<WidgetProps, keyof AsyncWidgetInjectedProps> {
     controller: string;
     widget: string;
 }
+
+type WidgetControllerComponent =
+    | React.ComponentClass<WidgetControllerProps & AsyncWidgetInjectedProps>
+    | React.SFC<WidgetControllerProps & AsyncWidgetInjectedProps>;
+type WidgetComponent =
+    | React.ComponentClass<WidgetProps & AsyncWidgetInjectedProps>
+    | React.SFC<WidgetProps & AsyncWidgetInjectedProps>;
+
 interface AsyncWidgetState {
-    controller?: React.ComponentClass<WidgetControllerProps> | React.SFC<WidgetControllerProps> | null;
-    widget?: React.ComponentClass<WidgetProps> | React.SFC<WidgetProps> | null;
+    controller?: WidgetControllerComponent | null;
+    widget?: WidgetComponent | null;
 }
 class AsyncWidget extends React.PureComponent<AsyncWidgetProps, AsyncWidgetState> {
+    private static controllerCache: Record<string, WidgetControllerComponent> = {};
+    private static widgetCache: Record<string, WidgetComponent> = {};
+
     public state: AsyncWidgetState = {};
 
-    public componentDidMount(): void {
-        import(`src/widgets/${this.props.controller}/`).then(
-            module => this.setState({ controller: module.default }),
-            () => this.setState({ controller: DefaultController })
-        );
+    private renderCount: number = 0;
 
-        import(`src/widgets/${this.props.controller}/${this.props.widget}`).then(
-            module => this.setState({ widget: module.default }),
-            () => this.setState({ widget: null })
-        );
+    public componentWillMount(): void {
+        if (AsyncWidget.controllerCache[this.props.controller] != null) {
+            this.setState({ controller: AsyncWidget.controllerCache[this.props.controller] });
+        } else {
+            import(`src/widgets/${this.props.controller}/`).then(
+                module => {
+                    AsyncWidget.controllerCache[this.props.controller] = module.default;
+                    this.setState({ controller: module.default })
+                },
+                () => this.setState({ controller: DefaultController })
+            );
+        }
+
+        const widgetKey = `${this.props.controller}/${this.props.widget}`;
+        if (AsyncWidget.widgetCache[widgetKey] != null) {
+            this.setState({ widget: AsyncWidget.widgetCache[widgetKey]  });
+        } else {
+            import(`src/widgets/${this.props.controller}/${this.props.widget}`).then(
+                module => {
+                    AsyncWidget.widgetCache[widgetKey] = module.default;
+                    this.setState({ widget: module.default });
+                },
+                () => this.setState({ widget: null })
+            );
+        }
     }
 
     public render(): React.ReactNode {
+        this.renderCount++;
+
         if (this.state.controller != null && this.state.widget != null) {
             const Controller = this.state.controller;
             const props = { ...this.props };
@@ -47,7 +81,9 @@ class AsyncWidget extends React.PureComponent<AsyncWidgetProps, AsyncWidgetState
             delete props.widget;
             delete props.controller;
 
-            return <Controller {...props} widget={this.state.widget} />;
+            return (
+                <Controller {...props} widget={this.state.widget} renderCount={this.renderCount} />
+            );
         }
 
         if (this.state.controller === null) {
@@ -62,7 +98,8 @@ class AsyncWidget extends React.PureComponent<AsyncWidgetProps, AsyncWidgetState
     }
 }
 
-export interface WidgetFactoryProps extends WidgetProps {
+export interface WidgetFactoryProps {
+    title: string;
     widgetPath: string;
 }
 export class WidgetFactory extends React.PureComponent<WidgetFactoryProps> {
@@ -72,6 +109,6 @@ export class WidgetFactory extends React.PureComponent<WidgetFactoryProps> {
         const props = { ...this.props };
         delete props.widgetPath;
 
-        return <AsyncWidget {...props} controller={controller} widget={widget} />;
+        return <AsyncWidget controller={controller} widget={widget} title={this.props.title} />;
     }
 }

@@ -7,11 +7,18 @@
         <meta name="mobile-web-app-capable" content="yes" />
         <meta charset="utf-8" />
 
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
         <title><%= htmlWebpackPlugin.options.title %></title>
+
+        <style type="text/css">
+            .widget {
+                border: 1px solid lightblue;
+            }
+        </style>
     </head>
     <body>
-
-        <div id="root">
+        <div id="root" class="container-fluid">
             <h1>Loading...</h1>
         </div>
     </body>
